@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login e Comissões</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+    <!-- Seção de Login -->
+    <div id="loginSection">
+        <h1>Login</h1>
+        <form id="loginForm">
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" required>
+            <br><br>
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+            <br><br>
+            <button type="submit">Login</button>
+        </form>
+        <div id="response"></div>
+    </div>
+
+    <!-- Seção de Comissões (inicialmente oculta) -->
+    <div id="comissaoSection" class="hidden">
+        <h1>Comissões</h1>
+        <h2>Modificadores</h2>
+        <label for="usuarioSelect">Escolha um usuário:</label>
+        <select id="usuarioSelect">
+            <option value="">Selecione um usuário</option>
+        </select>
+        <div id="infoUsuario"></div>
+    </div>
+
+    <script>
+        let token = ''; // Variável para armazenar o token
+
+        // Lida com o envio do formulário de login
+        document.getElementById('loginForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            const payload = {
+                "username": username,
+                "password": password
+            };
+
+            try {
+                // Envia o request usando axios
+                const response = await axios.post('http://192.168.0.55:5000/auth/login', payload);
+                token = response.data.access_token;  // Armazena o token
+                document.getElementById('response').innerText = 'Login successful';
+
+                // Oculta a seção de login e exibe a seção de comissões
+                document.getElementById('loginSection').classList.add('hidden');
+                document.getElementById('comissaoSection').classList.remove('hidden');
+
+                carregar();  // Chama a função para carregar os dados de comissões
+
+            } catch (error) {
+                document.getElementById('response').innerText = 'Login failed: ' + error.message;
+            }
+        });
+
+        async function carregar() {
+            try {
+                // Faz a requisição para pegar todos os dados de usuários
+                const response = await axios.get('http://192.168.0.55:5000/4Shark/Modificadores/2024', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const pessoas = response.data.data;
+                const selectUsuario = document.getElementById("usuarioSelect");
+
+                // Popula o campo de seleção com os usuários
+                pessoas.forEach(usuario => {
+                    const option = document.createElement('option');
+                    option.value = usuario.usuario;
+                    option.innerText = usuario.usuario;
+                    selectUsuario.appendChild(option);
+                });
+
+                // Adiciona um evento para atualizar as informações ao selecionar um usuário
+                selectUsuario.addEventListener('change', function() {
+                    const usuarioSelecionado = this.value;
+                    const infoUsuario = document.getElementById("infoUsuario");
+                    infoUsuario.innerHTML = '';
+
+                    const usuario = pessoas.find(u => u.usuario === usuarioSelecionado);
+                    if (usuario) {
+                        const info = document.createElement('p');
+                        info.innerHTML = `Usuário: ${usuario.usuario} <br> Faturamento: ${usuario.faturamento_liquido} <br> Percentual de Premiação: ${usuario.percentual_premiacao}%`;
+                        infoUsuario.appendChild(info);
+                    }
+                });
+
+            } catch (error) {
+                console.error('Erro ao carregar os dados', error);
+            }
+        }
+    </script>
+</body>
+</html>
